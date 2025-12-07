@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Battlefront Apex Mobile</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: #222;
+      touch-action: none;
+      user-select: none;
+    }
+
+    canvas {
+      display: block;
+      background: #333;
+    }
+
+    .btn {
+      position: absolute;
+      background: rgba(255,255,255,0.15);
+      color: white;
+      border-radius: 50%;
+      width: 70px;
+      height: 70px;
+      text-align: center;
+      line-height: 70px;
+      font-size: 20px;
+      user-select: none;
+    }
+
+    #joystick {
+      position: absolute;
+      left: 20px;
+      bottom: 20px;
+      width: 120px;
+      height: 120px;
+      background: rgba(255,255,255,0.12);
+      border-radius: 50%;
+      touch-action: none;
+    }
+
+    #jumpBtn { right: 20px; bottom: 120px; }
+    #shootBtn { right: 20px; bottom: 20px; background: rgba(255,0,0,0.25); }
+    #buildBtn { right: 120px; bottom: 70px; background: rgba(0,150,255,0.25); }
+  </style>
+</head>
+<body>
+
+<canvas id="gameCanvas"></canvas>
+
+<div id="joystick"></div>
+<div id="jumpBtn" class="btn">J</div>
+<div id="shootBtn" class="btn">🔥</div>
+<div id="buildBtn" class="btn">🧱</div>
+
+<script>
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+resizeCanvas();
+
+let player = {
+  x: 200, y: 200, w: 30, h: 30,
+  vx: 0, vy: 0, speed: 3, jumping: false
+};
+
+let bullets = [];
+let walls = [];
+let enemies = [];
+
+function resizeCanvas() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+
+/***************
+ TOUCH JOYSTICK
+****************/
+let joystick = document.getElementById("joystick");
+let joy = { active:false, x:0, y:0, dx:0, dy:0 };
+
+joystick.addEventListener("touchstart", e => {
+  joy.active = true;
+  joy.x = e.touches[0].clientX;
+  joy.y = e.touches[0].clientY;
+});
+
+joystick.addEventListener("touchmove", e => {
+  if(!joy.active) return;
+  joy.dx = e.touches[0].clientX - joy.x;
+  joy.dy = e.touches[0].clientY - joy.y;
+});
+
+joystick.addEventListener("touchend", e => {
+  joy.active = false;
+  joy.dx = 0;
+  joy.dy = 0;
+});
+
+/***************
+ BUTTON TOUCH
+****************/
+let jumpPressed = false;
+let shootPressed = false;
+let buildPressed = false;
+
+function setupButtonTouch(id, setter){
+  const btn = document.getElementById(id);
+  btn.addEventListener("touchstart", e => { setter(true); e.preventDefault(); });
+  btn.addEventListener("touchend", e => { setter(false); e.preventDefault(); });
+}
+
+setupButtonTouch("jumpBtn", val => jumpPressed = val);
+setupButtonTouch("shootBtn", val => shootPressed = val);
+setupButtonTouch("buildBtn", val => buildPressed = val);
+
+/***************
+ GAME LOOP
+****************/
+function loop() {
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+
+function update() {
+  // Joystick movement
+  player.vx = (joy.dx/40)*player.speed;
+  player.x += player.vx;
+
+  // Gravity
+  player.vy += 0.5;
+  player.y += player.vy;
+
+  if(player.y > canvas.height - 50){
+    player.y = canvas.height - 50;
+    player.vy = 0;
+    player.jumping = false;
+  }
+
+  // Jump
+  if(jumpPressed && !player.jumping){
+    player.vy = -10;
+    player.jumping = true;
+  }
+
+  // Shoot
+  if(shootPressed){
+    bullets.push({ x: player.x + player.w/2, y: player.y, vx:0, vy:-10 });
+  }
+
+  // Build
+  if(buildPressed){
+    walls.push({ x: player.x + 40, y: player.y, w:20, h:40 });
+  }
+
+  // Bullets move
+  bullets.forEach(b => b.y += b.vy);
+
+  // Enemy spawn
+  if(Math.random()<0.02) enemies.push({ x: Math.random()*canvas.width, y:-20, w:20, h:20, vy:2 });
+  enemies.forEach(e => e.y += e.vy);
+}
+
+function draw(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  // Player
+  ctx.fillStyle = "#4AF";
+  ctx.fillRect(player.x,player.y,player.w,player.h);
+
+  // Bullets
+  ctx.fillStyle = "#FF0";
+  bullets.forEach(b => ctx.fillRect(b.x,b.y,5,10));
+
+  // Walls
+  ctx.fillStyle = "#888";
+  walls.forEach(w => ctx.fillRect(w.x,w.y,w.w,w.h));
+
+  // Enemies
+  ctx.fillStyle = "#F33";
+  enemies.forEach(e => ctx.fillRect(e.x,e.y,e.w,e.h));
+}
+
+loop();
+</script>
+</body>
+</html
